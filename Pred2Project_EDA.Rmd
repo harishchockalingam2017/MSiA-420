@@ -1,0 +1,76 @@
+---
+title: "Pred2Project_EDA"
+author: "Rachel Rosenberg"
+date: "2/13/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, root.dir = '~/420 - Predictive II/Aggregated Data')
+library(tidyverse)
+library(readxl)
+library(plyr)
+library(dplyr)
+```
+
+## Import Data
+```{r}
+park_areas <- read_excel("~/420 - Predictive II/Aggregated Data/Park Areas by ZIP.xlsx")
+ZIP <- read_excel("~/420 - Predictive II/Aggregated Data/ZIP to Neighborhood.xlsx")
+num_of_parks <- read_excel("~/420 - Predictive II/Aggregated Data/Number of Parks by ZIP.xlsx")
+liquor <- read_excel("~/420 - Predictive II/Aggregated Data/Liquor Licenses by ZIP.xlsx")
+grocery <- read_excel("~/420 - Predictive II/Aggregated Data/Grocery Stores by Neighborhood.xlsx")
+health <- read.csv("~/420 - Predictive II/Aggregated Data/Public_Health_Statistics-_Selected_public_health_indicators_by_Chicago_community_area.csv")
+ZIPtoCA <- read_excel("~/420 - Predictive II/Aggregated Data/ZIPtoCA.xlsx")
+```
+
+## Join Health data and neighborhoods
+```{r}
+colnames(ZIPtoCA) <- c("ChicagoCA", "ZIPCode", "2010Pop")
+health <- merge(health, ZIPtoCA, by.x = "Community.Area", by.y = "ChicagoCA")
+health <- merge(health, ZIP, by.x = "ZIPCode", by.y = "Zip Code")
+health <- health[ , c(1:4, 18, 5:17, 18:32)] # reorder columns
+
+write.csv(health, file = "~/420 - Predictive II/Aggregated Data/healthWithZIPSandCAs.csv")
+```
+
+## Create full matrix of predictors
+```{r}
+allPreds <- health
+names(allPreds)
+head(allPreds)
+head(grocery)
+
+# Merge in park_areas
+allPreds <- merge(allPreds, park_areas, by.x = "ZIPCode", by.y = "ZIP")
+
+# Merge in num_of_parks
+allPreds <- merge(allPreds, num_of_parks, by.x = "ZIPCode", by.y = "ZIP")
+
+# Merge in liquor
+allPreds <- merge(allPreds, liquor, by.x = "ZIPCode", by.y = "Zip Code")
+
+# Merge in grocery
+allPreds <- merge(allPreds, grocery, by.x = "Neighborhood", by.y = "Neighborhood")
+
+# write.csv(allPreds, file = "~/420 - Predictive II/Aggregated Data/allPredictors.csv")
+```
+
+## Build linear model
+```{r}
+names(allPreds)
+fit_lm <- lm(Diabetes.related ~ Cancer..All.Sites. + Birth.Rate + Below.Poverty.Level + NumberOfParks + LiquorLicenses + GroceryStores, data = allPreds)
+summary(fit_lm)
+```
+
+## Fit nnet
+```{r}
+
+```
+
+## Fit decision tree
+```{r}
+
+```
+
+

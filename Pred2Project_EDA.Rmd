@@ -15,14 +15,79 @@ library(dplyr)
 
 ## Import Data
 ```{r}
-park_areas <- read_excel("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Park Areas by ZIP.xlsx")
-ZIP <- read_excel("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/ZIP to Neighborhood.xlsx")
-num_of_parks <- read_excel("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Number of Parks by ZIP.xlsx")
-liquor <- read_excel("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Liquor Licenses by ZIP.xlsx")
-grocery <- read_excel("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Grocery Stores by Neighborhood.xlsx")
-health <- read.csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Public_Health_Statistics-_Selected_public_health_indicators_by_Chicago_community_area.csv")
-ZIPtoCA <- read_excel("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/ZIPtoCA.xlsx")
+#Import the Food Inspection-related data
+
+Garbage_Carts <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/311_Service_Requests_-_Garbage_Carts.csv")
+Sanitation <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/311_Service_Requests_-_Sanitation_Code_Complaints.csv")
+Business_Licenses <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Business_Licenses.csv")
+Food_Inspections <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Food_Inspections.csv")
+
+
+
+
+park_areas <- read_excel("~/420 - Predictive II/Aggregated Data/Park Areas by ZIP.xlsx")
+ZIP <- read_excel("~/420 - Predictive II/Aggregated Data/ZIP to Neighborhood.xlsx")
+num_of_parks <- read_excel("~/420 - Predictive II/Aggregated Data/Number of Parks by ZIP.xlsx")
+liquor <- read_excel("~/420 - Predictive II/Aggregated Data/Liquor Licenses by ZIP.xlsx")
+grocery <- read_excel("~/420 - Predictive II/Aggregated Data/Grocery Stores by Neighborhood.xlsx")
+health <- read.csv("~/420 - Predictive II/Aggregated Data/Public_Health_Statistics-_Selected_public_health_indicators_by_Chicago_community_area.csv")
+ZIPtoCA <- read_excel("~/420 - Predictive II/Aggregated Data/ZIPtoCA.xlsx")
 ```
+```{r}
+library(lubridate)
+
+#Create variable for month of inspection
+Food_Inspections$inspection_month <- month(as.POSIXlt(Food_Inspections$`Inspection Date`, format="%m/%d/%Y"))
+
+#Filter Food Inspection Data for usable columns
+Food_Inspections_filtered <- Food_Inspections[,c(1:2,4,5,6,10:13,18)]
+
+#Create Binary Classifyer for Pass/Fail (will need to adjust later)
+Food_Inspections_filtered$Results_Numeric <- ifelse(Food_Inspections_filtered$Results =="Fail", 0, 1)
+  
+#filter for usable business license info
+License_Desc <- Business_Licenses[,c(2,11,16)]
+
+#filter for usable sanitation info then aggregate for each ward
+Sanitation_filtered <- Sanitation[,c(4,11)]
+Sanitation_filtered <- aggregate(`Service Request Number` ~ Ward, Sanitation_filtered, function(x) length(unique(x)))
+colnames(Sanitation_filtered)[2] <- "Num_Sanitation_Requests"
+
+#filter for usable garbage info then aggregate for each ward
+Garbage_filtered <- Garbage_Carts[,c(4,13)]
+Garbage_filtered <- aggregate(`Service Request Number` ~ Ward, Garbage_filtered, function(x) length(unique(x)))
+colnames(Garbage_filtered)[2] <- "Num_Garbage_Requests"
+
+
+```
+
+#join data together
+```{r}
+
+ModelData <- merge(Food_Inspections_filtered, License_Desc, by.x = "License #", by.y = "LICENSE ID")
+ModelData <- merge(ModelData, Sanitation_filtered, by.x = "WARD", by.y = "Ward")
+ModelData <- merge(ModelData, Garbage_filtered , by.x = "WARD", by.y = "Ward")
+
+
+
+
+```
+
+#Create linear model
+```{r}
+
+linear_model <- glm(ModelData$Results_Numeric ~ factor(ModelData$WARD) , family=binomial(link="logit"))
+
+linear_model <- glm(ModelData$Results_Numeric ~  factor(ModelData$inspection_month) +  ModelData$Num_Sanitation_Requests  + ModelData$Num_Garbage_Requests)
+summary(linear_model)
+
+
+```
+
+
+
+
+
 
 ## Join Health data and neighborhoods
 ```{r}
@@ -31,7 +96,7 @@ health <- merge(health, ZIPtoCA, by.x = "Community.Area", by.y = "ChicagoCA")
 health <- merge(health, ZIP, by.x = "ZIPCode", by.y = "Zip Code")
 health <- health[ , c(1:4, 18, 5:17, 18:32)] # reorder columns
 
-write.csv(health, file = "~/z/Grocery Stores/420 - Predictive II/Aggregated Data/healthWithZIPSandCAs.csv")
+write.csv(health, file = "~/420 - Predictive II/Aggregated Data/healthWithZIPSandCAs.csv")
 ```
 
 ## Create full matrix of predictors

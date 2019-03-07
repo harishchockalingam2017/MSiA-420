@@ -17,21 +17,12 @@ library(dplyr)
 ```{r}
 #Import the Food Inspection-related data
 
-Garbage_Carts <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/311_Service_Requests_-_Garbage_Carts.csv")
-Sanitation <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/311_Service_Requests_-_Sanitation_Code_Complaints.csv")
-Business_Licenses <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Business_Licenses.csv")
-Food_Inspections <- read_csv("~/z/Grocery Stores/420 - Predictive II/Aggregated Data/Food_Inspections.csv")
+Garbage_Carts <- read_csv("~/z/Grocery Stores/PA Project/Aggregated Data/311_Service_Requests_-_Garbage_Carts.csv")
+Sanitation <- read_csv("~/z/Grocery Stores/PA Project/Aggregated Data/311_Service_Requests_-_Sanitation_Code_Complaints.csv")
+Business_Licenses <- read_csv("~/z/Grocery Stores/PA Project/Aggregated Data/Business_Licenses.csv")
+Food_Inspections <- read_csv("~/z/Grocery Stores/PA Project/Aggregated Data/Food_Inspections.csv")
+Affordable_Housing <- read_csv("~/z/Grocery Stores/PA Project/Aggregated Data/Affordable_Rental_Housing_Developments.csv")
 
-
-
-
-park_areas <- read_excel("~/420 - Predictive II/Aggregated Data/Park Areas by ZIP.xlsx")
-ZIP <- read_excel("~/420 - Predictive II/Aggregated Data/ZIP to Neighborhood.xlsx")
-num_of_parks <- read_excel("~/420 - Predictive II/Aggregated Data/Number of Parks by ZIP.xlsx")
-liquor <- read_excel("~/420 - Predictive II/Aggregated Data/Liquor Licenses by ZIP.xlsx")
-grocery <- read_excel("~/420 - Predictive II/Aggregated Data/Grocery Stores by Neighborhood.xlsx")
-health <- read.csv("~/420 - Predictive II/Aggregated Data/Public_Health_Statistics-_Selected_public_health_indicators_by_Chicago_community_area.csv")
-ZIPtoCA <- read_excel("~/420 - Predictive II/Aggregated Data/ZIPtoCA.xlsx")
 ```
 ```{r}
 library(lubridate)
@@ -58,7 +49,8 @@ Garbage_filtered <- Garbage_Carts[,c(4,13)]
 Garbage_filtered <- aggregate(`Service Request Number` ~ Ward, Garbage_filtered, function(x) length(unique(x)))
 colnames(Garbage_filtered)[2] <- "Num_Garbage_Requests"
 
-
+Affordable_Housing_by_ZIP <- aggregate(Affordable_Housing$Units, by=list(Category=Affordable_Housing$`Zip Code`), FUN=sum)
+colnames(Affordable_Housing_by_ZIP) <- c("Zip", "Affordable_Housing_Units")
 ```
 
 #join data together
@@ -67,6 +59,7 @@ colnames(Garbage_filtered)[2] <- "Num_Garbage_Requests"
 ModelData <- merge(Food_Inspections_filtered, License_Desc, by.x = "License #", by.y = "LICENSE ID")
 ModelData <- merge(ModelData, Sanitation_filtered, by.x = "WARD", by.y = "Ward")
 ModelData <- merge(ModelData, Garbage_filtered , by.x = "WARD", by.y = "Ward")
+ModelData <- merge(ModelData, Affordable_Housing_by_ZIP , by.x = "Zip", by.y = "Zip")
 
 
 
@@ -78,7 +71,7 @@ ModelData <- merge(ModelData, Garbage_filtered , by.x = "WARD", by.y = "Ward")
 
 linear_model <- glm(ModelData$Results_Numeric ~ factor(ModelData$WARD) , family=binomial(link="logit"))
 
-linear_model <- glm(ModelData$Results_Numeric ~  factor(ModelData$inspection_month) +  ModelData$Num_Sanitation_Requests  + ModelData$Num_Garbage_Requests)
+linear_model <- glm(ModelData$Results_Numeric ~  factor(ModelData$inspection_month) +  ModelData$Num_Sanitation_Requests  + ModelData$Num_Garbage_Requests + ModelData$Affordable_Housing_Units)
 summary(linear_model)
 
 
@@ -86,6 +79,20 @@ summary(linear_model)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Everything below here is old
 
 
 

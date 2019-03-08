@@ -13,6 +13,8 @@ library(plyr)
 library(dplyr)
 ```
 
+
+
 ## Import Data
 ```{r}
 #Import the Food Inspection-related data
@@ -32,6 +34,9 @@ Food_Inspections$inspection_month <- month(as.POSIXlt(Food_Inspections$`Inspecti
 
 #Filter Food Inspection Data for usable columns
 Food_Inspections_filtered <- Food_Inspections[,c(1:2,4,5,6,10:13,18)]
+
+#Filter food inspection results for pass, fail, or pass w/ conditions
+Food_Inspections_filtered <- Food_Inspections_filtered[Food_Inspections_filtered$Results == "Pass" | Food_Inspections_filtered$Results == "Fail" | Food_Inspections_filtered$Results == "Pass w/ Conditions" ,]
 
 #Create Binary Classifyer for Pass/Fail (will need to adjust later)
 Food_Inspections_filtered$Results_Numeric <- ifelse(Food_Inspections_filtered$Results =="Fail", 0, 1)
@@ -64,7 +69,12 @@ ModelData <- merge(ModelData, Affordable_Housing_by_ZIP , by.x = "Zip", by.y = "
 
 
 
+
 ```
+
+
+
+
 
 #Create linear model
 ```{r}
@@ -76,6 +86,73 @@ summary(linear_model)
 
 
 ```
+
+
+
+
+
+```{r}
+#Random forest model
+
+ModelData1<-ModelData
+ModelData1[14:16]<-sapply(ModelData1[14:16], function(x) (x-mean(x))/sd(x)) #standardize predictors
+
+
+library(randomForest)
+rForest1 <- randomForest(Results_Numeric~ Num_Sanitation_Requests + Num_Garbage_Requests + Affordable_Housing_Units, data=ModelData1, mtry=3, ntree = 500, nodesize = 3, importance = TRUE)
+plot(rForest1)  #plots OOB mse vs # trees
+rForest1 #check the OOB mse and r^2
+importance(rForest1); varImpPlot(rForest1)
+par(mfrow=c(2,4))
+for (i in c(14,15,16)) partialPlot(rForest1, pred.data=ModelData1, x.var = names(ModelData1)[i], xlab = names(ModelData1)[i], main=NULL) #creates "partial dependence" plots 
+par(mfrow=c(1,1))
+c(rForest1$mse[rForest1$ntree], sum((rForest1$predicted - ModelData1$Results_Numeric)^2)/nrow(ModelData1)) #both give the OOB MSE
+
+
+```
+
+
+
+
+
+```{r}
+ModelData1<-ModelData
+ModelData1[14:16]<-sapply(ModelData1[14:16], function(x) (x-mean(x))/sd(x)) #standardize predictors
+
+library(mgcv)  #stands for “Mixed GAM Computation Vehicle”
+out<-gam(Results_Numeric~s(Num_Sanitation_Requests)+s(Num_Garbage_Requests)+s(Affordable_Housing_Units), data=ModelData1, family=binomial(), sp=c(-1,-1,-1)) 
+summary(out)
+out$sp  ##estimated smoothing parameters for each constituent function 
+yhat<-predict(out)
+plot(yhat,ModelData1$Results_Numeric)  #probably quite a bit of overitting
+##
+par(mfrow=c(2,4))
+plot(out)  #plot component functions
+```
+
+
+```{r}
+#K-Nearest Neighbors
+
+library(yaImpute)
+library(caret)
+
+ModelData1<-ModelData
+ModelData1[14:16]<-sapply(ModelData1[14:16], function(x) (x-mean(x))/sd(x)) #standardize predictors
+train<-as.matrix(ModelData1[,14:16])
+test<-as.matrix(ModelData1[,14:16])
+ytrain<-ModelData1[,12]
+ytest<-ModelData1[,12]
+K=10
+out<-ann(train,test,K)
+ind<-as.matrix(out$knnIndexDist[,1:K])
+phat<-apply(ind,1,function(x) sum(ytrain[x]==1)/length(ytrain[x]))
+plot(phat,jitter(as.numeric(ytest==1),amount=.05))
+table(phat,ytest)
+
+```
+
+
 
 
 

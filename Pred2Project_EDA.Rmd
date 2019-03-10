@@ -79,11 +79,29 @@ ModelData <- merge(ModelData, Affordable_Housing_by_ZIP , by.x = "Zip", by.y = "
 
 #Create linear model
 ```{r}
+library(car)
 
-linear_model <- glm(ModelData$Results_Numeric ~ factor(ModelData$WARD) , family=binomial(link="logit"))
+ModelData <- read_csv("~/z/Grocery Stores/PA Project/Aggregated Data/ModelData.csv")
+ModelData$ReInspection <- as.factor(ModelData$ReInspection)
+ModelData$Risk <- as.factor(ModelData$Risk)
+ModelData$inspection_season <- ifelse( ModelData$inspection_month < 4,
+                                    "Winter",
+                                    ifelse( ModelData$inspection_month < 7 & ModelData$inspection_month >= 4,
+                                    "Spring",
+                                     ifelse(  ModelData$inspection_month < 10 & ModelData$inspection_month >= 7,
+                                    "Summer",
+                                    ifelse(  ModelData$inspection_month < 13 & ModelData$inspection_month >= 10,
+                                    "Fall",
+                                    "N/A"
+                                    ))))
+table(ModelData$inspection_season)
+ModelData$inspection_month <- as.factor(ModelData$inspection_month)
 
-linear_model <- glm(ModelData$Results_Numeric ~  factor(ModelData$inspection_month) +  ModelData$Num_Sanitation_Requests  + ModelData$Num_Garbage_Requests + ModelData$Affordable_Housing_Units)
+
+linear_model <- glm(ModelData$Results_Numeric ~ ModelData$inspection_season + ModelData$Risk + ModelData$Num_Sanitation_Requests + ModelData$Num_Garbage_Requests + ModelData$PER.CAPITA.INCOME + ModelData$ReInspection + ModelData$Affordable_Housing_Units)
 summary(linear_model)
+
+vif(linear_model)
 
 ```
 

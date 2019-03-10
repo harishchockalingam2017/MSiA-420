@@ -56,6 +56,7 @@ colnames(Garbage_filtered)[2] <- "Num_Garbage_Requests"
 
 Affordable_Housing_by_ZIP <- aggregate(Affordable_Housing$Units, by=list(Category=Affordable_Housing$`Zip Code`), FUN=sum)
 colnames(Affordable_Housing_by_ZIP) <- c("Zip", "Affordable_Housing_Units")
+
 ```
 
 #join data together
@@ -83,7 +84,6 @@ linear_model <- glm(ModelData$Results_Numeric ~ factor(ModelData$WARD) , family=
 
 linear_model <- glm(ModelData$Results_Numeric ~  factor(ModelData$inspection_month) +  ModelData$Num_Sanitation_Requests  + ModelData$Num_Garbage_Requests + ModelData$Affordable_Housing_Units)
 summary(linear_model)
-
 
 ```
 
